@@ -5,71 +5,98 @@ using UnityEngine;
 public class GameManager : MonoBehaviour
 {
     // Weapon Type - Small, Medium, Large Rockets
-    public enum RocketType
-    {
-        SmallRocket = 1,
-        MediumRocket = 2,
-        LargeRocket = 3
-    }
+    //public enum RocketType
+    //{
+    //    SmallRocket = 1,
+    //    MediumRocket = 2,
+    //    LargeRocket = 3
+    //}
 
-    // Object Pooling
-    public GameObject SmallRocketPrefabObj;
-    public GameObject MediumRocketPrefabObj;
-    public GameObject LargeRocketPrefabObj;
-    
-    List<GameObject> SmallRocketObjs;
-    List<GameObject> MediumRocketObjs;
-    List<GameObject> LargeRocketObjs;
+    public RocketSettings SmallRocketSettings;
+    public RocketSettings MediumRocketSettings;
+    public RocketSettings LargeRocketSettings;
 
-    public Transform DefaultRocketTransform;
-    
-    public delegate void OnRocketHit(RocketType type);
+    public List<GameObject> SmallRocketObjs;
+    public List<GameObject> MediumRocketObjs;
+    public List<GameObject> LargeRocketObjs;
+
+    RocketSettings.RocketType CurrentRocketType;
+
+    public delegate void OnRocketLaunch(Transform StartTrans, RocketSettings.RocketType type);
+    public static event OnRocketLaunch onRocketLaunch;
+
+    public delegate void OnRocketTravel(Transform CurrentTrans, RocketSettings.RocketType type);
+    public static event OnRocketTravel onRocketTravel;
+
+    public delegate void OnRocketHit(Transform TargetTrans, RocketSettings.RocketType type);
     public static event OnRocketHit onRocketHit;
-    
+
     public static GameManager Instance;
 
     private void Awake()
     {
         Instance = this;
     }
-    
+
     void Start()
     {
         // Object Pooling for all rockets
-        CreateObjectPooling_AllRockets(); 
+        CreateObjectPooling_AllRockets();
     }
 
     void Update()
     {
-        
-    }    
+
+    }
+
+    private void OnEnable()
+    {
+        InputManager.onFireButtonPress += InputManager_onFireButtonPress;
+    }
+    private void OnDisable()
+    {
+        InputManager.onFireButtonPress -= InputManager_onFireButtonPress;
+    }
+
+    #region Event Functions
+    private void InputManager_onFireButtonPress(Transform TargetTrans)
+    {
+        FireRocket(CurrentRocketType, TargetTrans);
+    }
+
+    #endregion
 
 
     #region Object Pooling
     void CreateObjectPooling_AllRockets()
     {
-        CreatePoolObject(SmallRocketPrefabObj, 10, ref SmallRocketObjs);
-        CreatePoolObject(MediumRocketPrefabObj, 10, ref MediumRocketObjs);
-        CreatePoolObject(LargeRocketPrefabObj, 10, ref LargeRocketObjs);
+        CreatePoolObject(SmallRocketSettings, 10, out SmallRocketObjs);
+        CreatePoolObject(MediumRocketSettings, 10, out MediumRocketObjs);
+        CreatePoolObject(LargeRocketSettings, 10, out LargeRocketObjs);
     }
     // Create Object pooling objects
-    void CreatePoolObject(GameObject PrefabObj, int Count, ref List<GameObject> RocketObjs)
+    void CreatePoolObject(RocketSettings rocketSettings, int Count, out List<GameObject> RocketObjs)
     {
+        RocketObjs = new List<GameObject>();
         for (int i = 0; i < Count; i++)
         {
-            GameObject obj = Instantiate(PrefabObj, Vector3.zero, Quaternion.identity);
+            GameObject obj = Instantiate(rocketSettings.RocketObj, Vector3.zero, Quaternion.identity);
+            Rocket rocket = obj.GetComponent<Rocket>();
+            rocket.SetRocketSettings(rocketSettings);
             obj.SetActive(false);
             RocketObjs.Add(obj);
         }
     }
 
     // Get pooled object
-    public GameObject GetPooledObject(List<GameObject> pool)
+    public GameObject GetPooledObject(List<GameObject> pool, Transform TargetTrans)
     {
         for (int i = 0; i < pool.Count; i++)
         {
             if (!pool[i].activeInHierarchy)
             {
+                Rocket rocket = pool[i].GetComponent<Rocket>();
+                rocket.SetTarget(TargetTrans);
                 return pool[i];
             }
         }
@@ -77,49 +104,123 @@ public class GameManager : MonoBehaviour
     }
     #endregion
 
+    #region Helper
+    public RocketSettings.RocketType GetRocketType()
+    {
+        return CurrentRocketType;
+    }
+
+    public void SetRocketType(RocketSettings.RocketType type)
+    {
+        CurrentRocketType = type;
+    }
+    #endregion
+
+    #region Rocket Fire
     // Fire Rocket
-    public void FireRocket(RocketType type, Vector3 target, float height, float duration)
+    public void Test_FireRocket()
+    {
+        //FireRocket(RocketSettings.RocketType.SmallRocket, new Vector3(0, 2.5f, 16.6f));
+    }
+
+    void FireRocket(RocketSettings.RocketType type, Transform TargetTrans)
     {
         GameObject rocketObj = null;
         switch (type)
         {
-            case RocketType.SmallRocket:
-                rocketObj = GetPooledObject(SmallRocketObjs);
+            case RocketSettings.RocketType.SmallRocket:
+                rocketObj = GetPooledObject(SmallRocketObjs, TargetTrans);
                 break;
-            case RocketType.MediumRocket:
-                rocketObj = GetPooledObject(MediumRocketObjs);
+            case RocketSettings.RocketType.MediumRocket:
+                rocketObj = GetPooledObject(MediumRocketObjs, TargetTrans);
                 break;
-            case RocketType.LargeRocket:
-                rocketObj = GetPooledObject(LargeRocketObjs);
+            case RocketSettings.RocketType.LargeRocket:
+                rocketObj = GetPooledObject(LargeRocketObjs, TargetTrans);
                 break;
         }
         if (rocketObj != null)
         {
-            rocketObj.transform.position = DefaultRocketTransform.position;
-            rocketObj.transform.rotation = DefaultRocketTransform.rotation;
+            Vector3 CamPos = Camera.main.transform.position;
+            rocketObj.transform.position = new Vector3(CamPos.x, CamPos.y + 20, CamPos.z);
+            rocketObj.transform.LookAt(TargetTrans);
             rocketObj.SetActive(true);
-            
-            StartCoroutine(ParabolicMoveCoroutine(rocketObj, type, target, height, duration));
+
+            //StartCoroutine(FireRocketCoroutine(rocketObj, type, settings, target));
+            StartCoroutine(FireRocketAboveCoroutine(rocketObj, type, TargetTrans));
         }
     }
 
-    IEnumerator ParabolicMoveCoroutine(GameObject obj, RocketType type, Vector3 target, float height, float duration)
+    IEnumerator FireRocketCoroutine(GameObject obj, RocketSettings.RocketType type, Transform TargetTrans)
     {
+        //Vector3 centerPos = (obj.transform.position + target) * 0.5f;
+        //obj.transform.position = new Vector3(centerPos.x, settings.FlightHeight, centerPos.z);
+
         Vector3 originalPos = obj.transform.position;
         float elapsed = 0.0f;
+        onRocketLaunch?.Invoke(obj.transform, type); // Rocket Launch from ground
 
-        while (elapsed < duration)
+        RocketSettings settings = GetRocketSettings();
+
+        while (elapsed < settings.FlightDuration)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / duration;
+            float t = elapsed / settings.FlightDuration;
             t = Mathf.Sin(t * Mathf.PI * 0.5f);
 
-            obj.transform.position = Vector3.Lerp(originalPos, target, t) + new Vector3(0.0f, Mathf.Sin(Mathf.PI * t) * height, 0.0f);
+            onRocketTravel?.Invoke(obj.transform, type); // On Rocket flight or travel
+
+            obj.transform.position = Vector3.Lerp(originalPos, TargetTrans.position, t) + new Vector3(0.0f, Mathf.Sin(Mathf.PI * t) * settings.FlightHeight, 0.0f);
             yield return null;
         }
 
-        if (onRocketHit != null)
-            onRocketHit(type);
-        obj.transform.position = target;
+        onRocketHit?.Invoke(TargetTrans, type); // Rocket hit the target
+        obj.transform.position = TargetTrans.position;
     }
+
+    IEnumerator FireRocketAboveCoroutine(GameObject obj, RocketSettings.RocketType type, Transform TargetTrans)
+    {
+        Vector3 originalPos = obj.transform.localPosition;
+        float elapsed = 0.0f;
+        onRocketLaunch?.Invoke(obj.transform, type); // Rocket Launch
+
+        RocketSettings settings = GetRocketSettings();
+
+        while (elapsed < settings.FlightDuration)
+        {
+            elapsed += Time.deltaTime;
+
+            onRocketTravel?.Invoke(obj.transform, type); // On Rocket flight or travel
+
+            obj.transform.localPosition = Vector3.Lerp(originalPos, TargetTrans.position, elapsed);
+            yield return null;
+        }
+
+        obj.transform.localPosition = TargetTrans.position;
+        //obj.SetActive(false);
+    }
+
+    public void OnRocketHitTarget(Transform TargetTrans, RocketSettings.RocketType rocketType)
+    {
+        onRocketHit?.Invoke(TargetTrans, rocketType); // Rocket hit the target
+    }
+
+    // Get Rocket settings based on current type
+    public RocketSettings GetRocketSettings()
+    {
+        RocketSettings settings = null;
+        switch (CurrentRocketType)
+        {
+            case RocketSettings.RocketType.SmallRocket:
+                settings = SmallRocketSettings;
+                break;
+            case RocketSettings.RocketType.MediumRocket:
+                settings = MediumRocketSettings;
+                break;
+            case RocketSettings.RocketType.LargeRocket:
+                settings = LargeRocketSettings;
+                break;
+        }
+        return settings;
+    }
+    #endregion
 }

@@ -24,16 +24,16 @@ public class CameraManager : MonoBehaviour
         GameManager.onRocketHit += GameManager_onRocketHit;    
     }
 
-    private void GameManager_onRocketHit(GameManager.RocketType type)
+    private void GameManager_onRocketHit(Transform TargetTrans, RocketSettings.RocketType type)
     {
         CameraShake(type);
     }
 
     private void OnDisable()
     {
-        
+        GameManager.onRocketHit -= GameManager_onRocketHit;
     }
-    
+
     void Update()
     {
         
@@ -49,32 +49,30 @@ public class CameraManager : MonoBehaviour
         {
             case 1:
                 Debug.Log("Small Rocket");
-                CameraShake(GameManager.RocketType.SmallRocket);
+                CameraShake(RocketSettings.RocketType.SmallRocket);
                 break;
             case 2:
                 Debug.Log("Medium Rocket");
-                CameraShake(GameManager.RocketType.MediumRocket);
+                CameraShake(RocketSettings.RocketType.MediumRocket);
                 break;
             case 3:
                 Debug.Log("Large Rocket");
-                CameraShake(GameManager.RocketType.LargeRocket);
+                CameraShake(RocketSettings.RocketType.LargeRocket);
                 break;
         }
     }
 
 
-    public void CameraShake(GameManager.RocketType type)
+    public void CameraShake(RocketSettings.RocketType type)
     {
         StartCoroutine(Shake(CamShakeDuration, CamShakeMagnitude, type));        
     }
     // Camera shake effect
-    IEnumerator Shake(float duration, float magnitude, GameManager.RocketType type)
+    IEnumerator Shake(float duration, float magnitude, RocketSettings.RocketType type)
     {
         Vector3 originalPos = transform.localPosition;
         float elapsed = 0.0f;
         int TypeMultiplier = (int)type;
-        
-        Debug.Log(TypeMultiplier);
         
         while (elapsed < duration)
         {
@@ -91,6 +89,4 @@ public class CameraManager : MonoBehaviour
         transform.localPosition = originalPos;
     }
     #endregion
-    // Camera blast effect
-
 }
