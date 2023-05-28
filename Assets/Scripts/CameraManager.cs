@@ -34,7 +34,7 @@ public class CameraManager : MonoBehaviour
     #region Events
     private void GameManager_onRocketHit(Transform TargetTrans, RocketSettings.RocketType type)
     {
-        CameraShake(type);
+        //CameraShake(type);
     }
     #endregion
 

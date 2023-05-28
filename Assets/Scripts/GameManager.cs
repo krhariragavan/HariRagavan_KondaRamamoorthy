@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using static RocketSettings;
 
 public class GameManager : MonoBehaviour
 {
@@ -216,13 +217,14 @@ public class GameManager : MonoBehaviour
             yield return null;
         }
 
-        obj.transform.localPosition = TargetTrans.position;
-        //obj.SetActive(false);
+        obj.transform.localPosition = originalPos;
+        onRocketHit?.Invoke(TargetTrans, type); // Rocket hit the target
+        obj.SetActive(false);
     }
 
     public void OnRocketHitTarget(Transform TargetTrans, RocketSettings.RocketType rocketType)
     {
-        onRocketHit?.Invoke(TargetTrans, rocketType); // Rocket hit the target
+        //onRocketHit?.Invoke(TargetTrans, rocketType); // Rocket hit the target
     }
 
     // Get Rocket settings based on current type

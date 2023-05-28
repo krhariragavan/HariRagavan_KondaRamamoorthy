@@ -39,7 +39,7 @@ public class InputManager : MonoBehaviour
         if (hit.collider != null)
         {
             Transform hitTrans = hit.collider.transform;
-            if (hit.collider.gameObject.CompareTag("Road"))
+            if (hit.collider.gameObject.CompareTag("Env"))
             {
                 onMouseAim?.Invoke(hitTrans);
                 FireOnClick(hitTrans);

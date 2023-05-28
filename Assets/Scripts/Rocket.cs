@@ -31,7 +31,7 @@ public class Rocket : MonoBehaviour
     // On Trigger Enter call
     private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Road"))
+        if (other.CompareTag("Env"))
         {
             GameManager.Instance.OnRocketHitTarget(Target, settings.rocketType);
             gameObject.SetActive(false);
