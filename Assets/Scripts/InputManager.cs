@@ -5,7 +5,7 @@ using UnityEngine;
 public class InputManager : MonoBehaviour
 {
     public static InputManager Instance;
-    
+
     public delegate void OnMouseAim(Transform TargetPos);
     public static event OnMouseAim onMouseAim;
 
@@ -14,7 +14,7 @@ public class InputManager : MonoBehaviour
 
     public delegate void OnMouseAimLoose();
     public static event OnMouseAimLoose onMouseAimLoose;
-    
+
     private void Awake()
     {
         Instance = this;
@@ -33,6 +33,8 @@ public class InputManager : MonoBehaviour
     // Set fire target as mouse position on a 3d object
     public void MousePositionAim()
     {
+        if (!IsPointerOverGameObject()) return;
+
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         RaycastHit hit;
         Physics.Raycast(ray, out hit);
@@ -53,9 +55,19 @@ public class InputManager : MonoBehaviour
 
     void FireOnClick(Transform TargetTrans)
     {
-        if (Input.GetMouseButtonUp(0))
+        if (IsPointerOverGameObject())
         {
-            onFireButtonPress?.Invoke(TargetTrans);
+            if (Input.GetMouseButtonUp(0))
+            {
+                onFireButtonPress?.Invoke(TargetTrans);
+            }
         }
+    }
+
+    public bool IsPointerOverGameObject()
+    {
+        bool IsPointingGO = UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject();
+        //Debug.Log(IsPointingGO);
+        return !IsPointingGO;
     }
 }

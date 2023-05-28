@@ -7,6 +7,7 @@ public class RocketSettings : ScriptableObject
 {
     public GameObject RocketObj;
     public float FlightHeight;
+    [Range(0.1f, 3f)]
     public float FlightDuration;
     [Header("Accuracy - 0.1 lowest and 1 is the highest")]
     [Range(0.1f, 1f)]
