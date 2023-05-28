@@ -31,6 +31,9 @@ public class GameManager : MonoBehaviour
     public delegate void OnRocketHit(Transform TargetTrans, RocketSettings.RocketType type);
     public static event OnRocketHit onRocketHit;
 
+    public delegate void OnChangeRocketType(RocketSettings.RocketType type);
+    public static event OnChangeRocketType onChangeRocketType;
+
     public static GameManager Instance;
 
     private void Awake()
@@ -42,6 +45,7 @@ public class GameManager : MonoBehaviour
     {
         // Object Pooling for all rockets
         CreateObjectPooling_AllRockets();
+        SetRocketType(RocketSettings.RocketType.SmallRocket);
     }
 
     void Update()
@@ -66,44 +70,6 @@ public class GameManager : MonoBehaviour
 
     #endregion
 
-
-    #region Object Pooling
-    void CreateObjectPooling_AllRockets()
-    {
-        CreatePoolObject(SmallRocketSettings, 10, out SmallRocketObjs);
-        CreatePoolObject(MediumRocketSettings, 10, out MediumRocketObjs);
-        CreatePoolObject(LargeRocketSettings, 10, out LargeRocketObjs);
-    }
-    // Create Object pooling objects
-    void CreatePoolObject(RocketSettings rocketSettings, int Count, out List<GameObject> RocketObjs)
-    {
-        RocketObjs = new List<GameObject>();
-        for (int i = 0; i < Count; i++)
-        {
-            GameObject obj = Instantiate(rocketSettings.RocketObj, Vector3.zero, Quaternion.identity);
-            Rocket rocket = obj.GetComponent<Rocket>();
-            rocket.SetRocketSettings(rocketSettings);
-            obj.SetActive(false);
-            RocketObjs.Add(obj);
-        }
-    }
-
-    // Get pooled object
-    public GameObject GetPooledObject(List<GameObject> pool, Transform TargetTrans)
-    {
-        for (int i = 0; i < pool.Count; i++)
-        {
-            if (!pool[i].activeInHierarchy)
-            {
-                Rocket rocket = pool[i].GetComponent<Rocket>();
-                rocket.SetTarget(TargetTrans);
-                return pool[i];
-            }
-        }
-        return null;
-    }
-    #endregion
-
     #region Helper
     public RocketSettings.RocketType GetRocketType()
     {
@@ -113,6 +79,61 @@ public class GameManager : MonoBehaviour
     public void SetRocketType(RocketSettings.RocketType type)
     {
         CurrentRocketType = type;
+        onChangeRocketType?.Invoke(type);
+    }
+    #endregion
+
+    #region Object Pooling
+    void CreateObjectPooling_AllRockets()
+    {
+        CreatePoolObject(SmallRocketSettings, 10, out SmallRocketObjs);
+        CreatePoolObject(MediumRocketSettings, 10, out MediumRocketObjs);
+        CreatePoolObject(LargeRocketSettings, 10, out LargeRocketObjs);
+    }
+
+    void CreateRockets()
+    {
+
+    }
+    // Create Object pooling objects
+    void CreatePoolObject(RocketSettings rocketSettings, int Count, out List<GameObject> RocketObjs)
+    {
+        ObjectPoolingManager.Instance.CreatePoolObject(rocketSettings.RocketObj, Count, out RocketObjs);
+        foreach (GameObject obj in RocketObjs)
+        {
+            Rocket rocket = obj.GetComponent<Rocket>();
+            rocket.SetRocketSettings(rocketSettings);
+        }
+        
+        //RocketObjs = new List<GameObject>();
+        //for (int i = 0; i < Count; i++)
+        //{
+        //    GameObject obj = Instantiate(rocketSettings.RocketObj, Vector3.zero, Quaternion.identity);
+        //    Rocket rocket = obj.GetComponent<Rocket>();
+        //    rocket.SetRocketSettings(rocketSettings);
+        //    obj.SetActive(false);
+        //    RocketObjs.Add(obj);
+        //}
+    }
+
+    // Get pooled object
+    public GameObject GetPooledObject(List<GameObject> pool, Transform TargetTrans)
+    {
+        GameObject Inst = ObjectPoolingManager.Instance.GetObjectFromPool(pool);
+        Rocket rocket = Inst.GetComponent<Rocket>();
+        rocket.SetTarget(TargetTrans);
+        return Inst;
+        
+        //for (int i = 0; i < pool.Count; i++)
+        //{
+        //    if (!pool[i].activeInHierarchy)
+        //    {
+        //        Rocket rocket = pool[i].GetComponent<Rocket>();
+        //        rocket.SetTarget(TargetTrans);
+        //        return pool[i];
+        //    }
+        //}
+        //return null;
     }
     #endregion
 

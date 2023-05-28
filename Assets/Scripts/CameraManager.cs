@@ -8,6 +8,8 @@ public class CameraManager : MonoBehaviour
     public float CamShakeDuration = 0.5f;
     public float CamShakeMagnitude = 0.1f;
 
+    bool IsCameraShake;
+    Transform EnemyTransform;
     public static CameraManager Instance;
 
     void Awake()
@@ -21,12 +23,7 @@ public class CameraManager : MonoBehaviour
 
     private void OnEnable()
     {
-        GameManager.onRocketHit += GameManager_onRocketHit;    
-    }
-
-    private void GameManager_onRocketHit(Transform TargetTrans, RocketSettings.RocketType type)
-    {
-        CameraShake(type);
+        GameManager.onRocketHit += GameManager_onRocketHit;
     }
 
     private void OnDisable()
@@ -34,10 +31,26 @@ public class CameraManager : MonoBehaviour
         GameManager.onRocketHit -= GameManager_onRocketHit;
     }
 
+    #region Events
+    private void GameManager_onRocketHit(Transform TargetTrans, RocketSettings.RocketType type)
+    {
+        CameraShake(type);
+    }
+    #endregion
+
     void Update()
     {
-        
+
     }
+
+    private void LateUpdate()
+    {
+        CameraFollowEnemy();
+    }
+
+    // Camera shake effect without using position
+
+
 
     #region Camera Shake Effect
     public void TEST_CamShake() // Applied on button for testing.
@@ -65,7 +78,8 @@ public class CameraManager : MonoBehaviour
 
     public void CameraShake(RocketSettings.RocketType type)
     {
-        StartCoroutine(Shake(CamShakeDuration, CamShakeMagnitude, type));        
+        IsCameraShake = true;
+        StartCoroutine(Shake(CamShakeDuration, CamShakeMagnitude, type));
     }
     // Camera shake effect
     IEnumerator Shake(float duration, float magnitude, RocketSettings.RocketType type)
@@ -73,7 +87,7 @@ public class CameraManager : MonoBehaviour
         Vector3 originalPos = transform.localPosition;
         float elapsed = 0.0f;
         int TypeMultiplier = (int)type;
-        
+
         while (elapsed < duration)
         {
             float x = originalPos.x + Random.Range(-1f, 1f) * magnitude * TypeMultiplier;
@@ -87,6 +101,26 @@ public class CameraManager : MonoBehaviour
         }
 
         transform.localPosition = originalPos;
+        IsCameraShake = false;
+    }
+    #endregion
+
+    #region Camera Follow Enemy
+    public void SetEnemyTransform(Transform TargetTrans)
+    {
+        EnemyTransform = TargetTrans;
+    }
+
+    void CameraFollowEnemy() // Do particlemanager for explosions
+    {
+        if (EnemyTransform != null)
+        {
+            if (!IsCameraShake)
+            {
+                transform.position = new Vector3(EnemyTransform.position.x - 10f, 35f, EnemyTransform.position.z - 10f);
+                transform.LookAt(EnemyTransform);
+            }
+        }
     }
     #endregion
 }
